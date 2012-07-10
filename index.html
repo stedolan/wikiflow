@@ -94,8 +94,20 @@ var recent = {
 
 var spawn_rate = 0.7;
 var default_lifetime = 11000;
+var seeds = ['Wiki', 'Random Walk', 'Henry_VI,_Count_of_Luxembourg', 'Mont St. Michel', 'Gastroenterology', 'Candide', 'Mercantilism', 'Positron', 'CERN', 'Telstar', 'Anabel_Medina_Garrigues'];
+
+
+var spawn_first = false;
 
 function frame(dt) {
+  if (flows.length == 0 && spawn_first == false) {
+    spawn_first = true;
+    var title = seeds[Math.floor(Math.random()*seeds.length)];
+    get(title, function(data){
+      addflow(100, 100, title, data);
+      spawn_first = false;
+    });
+  }
   var newflows = [];
   $.each(flows, function(idx, flow){
     if (flow.t === undefined) flow.t = 0;
@@ -217,11 +229,9 @@ function spawn(flow) {
   }
 }
 
+
 $(function() { 
   iv = setInterval('frame(20)', 20);
-  get('Henry_VI,_Count_of_Luxembourg', function(data){
-      addflow(100, 100, 'albert einstein', data);
-  });
 });
 
 
