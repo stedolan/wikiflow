@@ -1,6 +1,8 @@
 wikiflow
 ========
 
+http://stedolan.github.com/wikiflow
+
 wikiflow draws a random walk through wikipedia articles, by following
 links in the first paragraph of text on each page.
 
