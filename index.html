@@ -31,6 +31,13 @@ html, body {
 }
 </style>
 <script type="text/javascript">
+function log () {
+    if (typeof console == 'undefined') {
+        return;
+    }
+    console.log.apply(console, arguments);
+}
+
 function get(title, success) {
   var encodedTitle = encodeURIComponent(title);
   var catURL = 'http://en.wikipedia.org/w/api.php?action=query&prop=categories&titles=Sometimes&format=json&redirects=1&titles=' + encodedTitle + '&callback=?';
@@ -38,7 +45,7 @@ function get(title, success) {
   $.getJSON(catURL, function(data) {
   var ambig = false;
   if (data.error) {
-    console.log("Can't find entry for '" + title + "'");
+    log("Can't find entry for '" + title + "'");
     return;
   }
   $.each(data.query.pages, function(id, pagecats) {
@@ -51,11 +58,11 @@ function get(title, success) {
     }
   });
   if (ambig) {
-    console.log("'" + title  + "' is ambiguous");
+    log("'" + title  + "' is ambiguous");
   } else {
     $.getJSON(dataURL, function(data) {
     if (data.error) {
-      console.log("Can't find entry for '" + title + "'");
+      log("Can't find entry for '" + title + "'");
       return;
     }
     var text = data.mobileview.sections[0].text;
@@ -70,9 +77,6 @@ function get(title, success) {
       }
     });
     success(para);
-//    $.each(para.find('a[title]'), function(idx, link) {
-//      console.log(link);
-//    });
     });
   }
   });
@@ -93,7 +97,7 @@ var recent = {
   add: function(title) {
     title = title.toLowerCase();
     if (title in this.seen || title in this.seen_old) {
-      console.log("woops! duplicate " + title);
+      log("woops! duplicate " + title);
     } else {
       this.seen[title] = 1;
       this.seen_count++;
@@ -167,7 +171,7 @@ function frame(dt) {
 }
 
 function addflow(x, y, title, contents) {
-  console.log(title);
+  log(title);
   var elem = 
     $('<div class="flow" />').append(contents)
     .css('left', x + "px")
