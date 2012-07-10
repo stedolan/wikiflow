@@ -43,9 +43,9 @@ function get(title, success) {
       return;
     }
     var text = data.mobileview.sections[0].text;
-    text = text.replace(/\([^()]*\)/g,'').replace(/\([^()]*\)/g,'');
+    text = text.replace(/ ?\([^()]*\)/g,'').replace(/ ?\([^()]*\) ?/g,'');
     var para = $('<div>' + text + '</div>')
-      .children('p').first();
+      .children('p').not(':has(#coordinates)').first();
     $.each(para.find('a'), function(idx, link) {
       link = $(link);
       if (link.attr('href').substring(0,1) == '/') {
@@ -94,7 +94,8 @@ var recent = {
 
 var spawn_rate = 0.7;
 var default_lifetime = 11000;
-var seeds = ['Wiki', 'Random Walk', 'Henry_VI,_Count_of_Luxembourg', 'Mont St. Michel', 'Gastroenterology', 'Candide', 'Mercantilism', 'Positron', 'CERN', 'Telstar', 'Anabel_Medina_Garrigues'];
+//var seeds = ['Wiki', 'Random Walk', 'Henry_VI,_Count_of_Luxembourg', 'Mont St. Michel', 'Gastroenterology', 'Candide', 'Mercantilism', 'Positron', 'CERN', 'Telstar', 'Anabel_Medina_Garrigues', 'ARA_General_Belgrano_(1896)', 'The_Firebird', 'Don_Giovanni_de_la_Fortuna', 'Candareen'];
+var seeds = ['CERN'];
 
 
 var spawn_first = false;
@@ -136,7 +137,7 @@ function frame(dt) {
   var curr_spawn_rate = spawn_rate;
   if (flows.length < 4) curr_spawn_rate *= 1.5;
   if (flows.length > 12) curr_spawn_rate *= 0.4;
-  if (Math.random() < (curr_spawn_rate / 1000) * dt) {
+  if (Math.random() < (curr_spawn_rate / 1000) * dt && flows.length > 0) {
     spawn(flows[Math.floor(Math.random()*flows.length)]);
   }
   var newanims = [];
@@ -151,6 +152,7 @@ function frame(dt) {
 }
 
 function addflow(x, y, title, contents) {
+  console.log(title);
   var elem = 
     $('<div class="flow" />').append(contents)
     .css('left', x + "px")
@@ -186,7 +188,6 @@ function spawn(flow) {
     if (pos.left > 0 && !title.match(/^File:|^Wikipedia:/i) && !recent.check(title)) {
       rightmost_link = link;
     }
-    console.log(title);
   });
   if (rightmost_link) {
     var title = rightmost_link.attr('title');
@@ -201,7 +202,7 @@ function spawn(flow) {
         //        var y = ((flow.elem.offset().top - wpos.top)  + flowh / 2) +
         //          ((flowh / 2) * 1.0 + Math.random()*0) * 
         //          (Math.random() > 0.5 ? 1 : -1);
-        var y = Math.random() * $('#wikiflow').height();
+        var y = Math.random() * ($('#wikiflow').height() - 30);
         var newflow = addflow(x, y, rightmost_link.attr('title'), data);
         var bar = $('<div/>').css({'background-color':'black','width':'2px','position':'absolute',left:(x + linkw/2) + "px"});
         var newh = newflow.elem.height();
