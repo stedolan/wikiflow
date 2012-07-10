@@ -13,6 +13,16 @@
   position: absolute;
   white-space: nowrap;
 }
+#splash {
+  text-align: center;
+  width: 100%;
+  height: 50px;
+  position: relative;
+  top: 35%;
+  left: 0px;
+  font-family: monospace;
+  font-size: 50pt;
+}
 </style>
 <script type="text/javascript">
 function get(title, success) {
@@ -43,7 +53,7 @@ function get(title, success) {
       return;
     }
     var text = data.mobileview.sections[0].text;
-    text = text.replace(/ ?\([^()]*\)/g,'').replace(/ ?\([^()]*\) ?/g,'');
+    text = text.replace(/ ?\([^()]*\)/g,'').replace(/ ?\([^()]*\)/g,'');
     var para = $('<div>' + text + '</div>')
       .children('p').not(':has(#coordinates)').first();
     $.each(para.find('a'), function(idx, link) {
@@ -94,8 +104,7 @@ var recent = {
 
 var spawn_rate = 0.7;
 var default_lifetime = 11000;
-//var seeds = ['Wiki', 'Random Walk', 'Henry_VI,_Count_of_Luxembourg', 'Mont St. Michel', 'Gastroenterology', 'Candide', 'Mercantilism', 'Positron', 'CERN', 'Telstar', 'Anabel_Medina_Garrigues', 'ARA_General_Belgrano_(1896)', 'The_Firebird', 'Don_Giovanni_de_la_Fortuna', 'Candareen'];
-var seeds = ['CERN'];
+var seeds = ['Wiki', 'Random Walk', 'Henry_VI,_Count_of_Luxembourg', 'Mont St. Michel', 'Gastroenterology', 'Candide', 'Mercantilism', 'Positron', 'CERN', 'Telstar', 'Anabel_Medina_Garrigues', 'ARA_General_Belgrano_(1896)', 'The_Firebird', 'Don_Giovanni_de_la_Fortuna', 'Candareen'];
 
 
 var spawn_first = false;
@@ -105,7 +114,7 @@ function frame(dt) {
     spawn_first = true;
     var title = seeds[Math.floor(Math.random()*seeds.length)];
     get(title, function(data){
-      addflow(100, 100, title, data);
+      addflow($('#wikiflow').width() * 0.7, 100, title, data);
       spawn_first = false;
     });
   }
@@ -230,15 +239,17 @@ function spawn(flow) {
   }
 }
 
-
 $(function() { 
-  iv = setInterval('frame(20)', 20);
+  $('#splash').fadeOut(2000, function() {
+    iv = setInterval('frame(20)', 20);
+  });
 });
 
 
 </script>
 </head>
 <body>
+<div id="splash">wikiflow</div>
 <div id="wikiflow"></div>
 </body>
 </html>
