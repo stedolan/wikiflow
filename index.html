@@ -1,0 +1,233 @@
+<html>
+<head>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript"></script> 
+<style type="text/css">
+#wikiflow {
+  position: relative;
+  font-family: sans;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+#wikiflow .flow {
+  position: absolute;
+  white-space: nowrap;
+}
+</style>
+<script type="text/javascript">
+function get(title, success) {
+  var encodedTitle = encodeURIComponent(title);
+  var catURL = 'http://en.wikipedia.org/w/api.php?action=query&prop=categories&titles=Sometimes&format=json&redirects=1&titles=' + encodedTitle + '&callback=?';
+  var dataURL = 'http://en.wikipedia.org/w/api.php?action=mobileview&mobileformat=html&prop=text&format=json&noimages=1&noheadings=1&sections=0&page=' + encodedTitle + '&callback=?';
+  $.getJSON(catURL, function(data) {
+  var ambig = false;
+  if (data.error) {
+    console.log("Can't find entry for '" + title + "'");
+    return;
+  }
+  $.each(data.query.pages, function(id, pagecats) {
+    if (pagecats.categories) {
+      $.each(pagecats.categories, function(idx, category) {
+        if (category.title.search(/disambiguation/i) != -1) {
+          ambig = true;
+        } 
+      });
+    }
+  });
+  if (ambig) {
+    console.log("'" + title  + "' is ambiguous");
+  } else {
+    $.getJSON(dataURL, function(data) {
+    if (data.error) {
+      console.log("Can't find entry for '" + title + "'");
+      return;
+    }
+    var text = data.mobileview.sections[0].text;
+    text = text.replace(/\([^()]*\)/g,'').replace(/\([^()]*\)/g,'');
+    var para = $('<div>' + text + '</div>')
+      .children('p').first();
+    $.each(para.find('a'), function(idx, link) {
+      link = $(link);
+      if (link.attr('href').substring(0,1) == '/') {
+        link.attr('href', 'http://en.wikipedia.org' + link.attr('href'));
+        link.attr('target', '_blank');
+      }
+    });
+    success(para);
+//    $.each(para.find('a[title]'), function(idx, link) {
+//      console.log(link);
+//    });
+    });
+  }
+  });
+}
+
+var flows = [];
+var animations = [];
+
+
+var recent = {
+  seen: {},
+  seen_old: {},
+  seen_count: 0,
+  check: function(title) {
+    title = title.toLowerCase();
+    return (title in this.seen || title in this.seen_old);
+  },
+  add: function(title) {
+    title = title.toLowerCase();
+    if (title in this.seen || title in this.seen_old) {
+      console.log("woops! duplicate " + title);
+    } else {
+      this.seen[title] = 1;
+      this.seen_count++;
+      if (this.seen_count >= 100) {
+        this.seen_old = this.seen;
+        this.seen = {}
+        this.seen_count = 0;
+      }
+    }
+  }
+}
+
+
+
+var spawn_rate = 0.7;
+var default_lifetime = 11000;
+
+function frame(dt) {
+  var newflows = [];
+  $.each(flows, function(idx, flow){
+    if (flow.t === undefined) flow.t = 0;
+    flow.t += dt;
+    if (flow.t > flow.lifetime / 2 && flows.length > 5) {
+      flow.opacity -= dt / flow.lifetime;
+      flow.elem.css('opacity', flow.opacity);
+      if (flow.opacity < 0.01) {
+        flow.live = false;
+      }
+    }
+    flow.x -= flow.vx * dt / 1000;
+    flow.elem.css('left', flow.x + "px");
+    if (flow.x + flow.width < 0) {
+      flow.live = false;
+    }
+
+    if (flow.live) {
+      newflows.push(flow);
+    } else {
+      flow.live = false;
+      flow.elem.remove();
+    }
+  });
+  flows = newflows;
+  var curr_spawn_rate = spawn_rate;
+  if (flows.length < 4) curr_spawn_rate *= 1.5;
+  if (flows.length > 12) curr_spawn_rate *= 0.4;
+  if (Math.random() < (curr_spawn_rate / 1000) * dt) {
+    spawn(flows[Math.floor(Math.random()*flows.length)]);
+  }
+  var newanims = [];
+  $.each(animations, function(idx, anim){
+    if (anim.t === undefined) anim.t = 0;
+    anim.t += dt;
+    if (anim.step() != false) {
+      newanims.push(anim);
+    }
+  });
+  animations = newanims;
+}
+
+function addflow(x, y, title, contents) {
+  var elem = 
+    $('<div class="flow" />').append(contents)
+    .css('left', x + "px")
+    .css('top', y + "px")
+    .css('font-size', (8 + Math.random()*10) + "pt");
+  
+  elem.appendTo($('#wikiflow'));
+  y -= elem.height() / 2;
+  var newflow = {
+    x: x, 
+    y: y,
+    lifetime: default_lifetime + (Math.random() - 0.5) * 4000,
+    title: title,
+    opacity: 1,
+    elem: elem,
+    width: elem.width(),
+    vx: 20+Math.random()*130, 
+    live: true};
+  flows.push(newflow);
+  return newflow;
+}
+
+function spawn(flow) {
+  var max_width = $('#wikiflow').width();
+  var rightmost_link;
+  $.each(flow.elem.find('a[title]'), function(idx, link_) {
+    var link = $(link_);
+    var pos = link.offset();
+    if (pos.left > max_width) {
+      return false; // i.e. break
+    }
+    var title = link.attr('title');
+    if (pos.left > 0 && !title.match(/^File:|^Wikipedia:/i) && !recent.check(title)) {
+      rightmost_link = link;
+    }
+    console.log(title);
+  });
+  if (rightmost_link) {
+    var title = rightmost_link.attr('title');
+    recent.add(title);
+    get(title, function (data) {
+      var wpos = $('#wikiflow').offset();
+      var pos = rightmost_link.offset();
+      var linkw = rightmost_link.width();
+      var x = pos.left - wpos.left;
+      if (x > 0) { // may have moved offscreen during GET
+        var flowh = flow.elem.height();
+        //        var y = ((flow.elem.offset().top - wpos.top)  + flowh / 2) +
+        //          ((flowh / 2) * 1.0 + Math.random()*0) * 
+        //          (Math.random() > 0.5 ? 1 : -1);
+        var y = Math.random() * $('#wikiflow').height();
+        var newflow = addflow(x, y, rightmost_link.attr('title'), data);
+        var bar = $('<div/>').css({'background-color':'black','width':'2px','position':'absolute',left:(x + linkw/2) + "px"});
+        var newh = newflow.elem.height();
+        var bartop = Math.min(y + newh/2, pos.top - wpos.top + flowh/2);
+        var barbot = Math.max(y + newh/2, pos.top - wpos.top + flowh/2);
+        bar.css({top: bartop + "px", height: (barbot - bartop) + "px"});
+        bar.appendTo($('#wikiflow'));
+        animations.push({
+          len: 800,
+          step: function() {
+            if (this.t > this.len) {
+              rightmost_link.css('background-color', '');
+              bar.remove();
+              return false;
+            } else {
+              bar.css('left', rightmost_link.offset().left - wpos.left + linkw/2);
+              newcolor = {'background-color': 'rgba(150,240,170,'+(1-this.t/this.len)+')'};
+              rightmost_link.css(newcolor);
+              bar.css(newcolor);
+            }
+          }
+        });
+      }
+    });
+  }
+}
+
+$(function() { 
+  iv = setInterval('frame(20)', 20);
+  get('Henry_VI,_Count_of_Luxembourg', function(data){
+      addflow(100, 100, 'albert einstein', data);
+  });
+});
+
+
+</script>
+</head>
+<body>
+<div id="wikiflow"></div>
+</body>
+</html>
